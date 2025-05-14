@@ -1,5 +1,10 @@
+import { Suspense } from "react";
 import LoginLayout from "./layout";
 
-export default async function LoginPage() {
-  return <LoginLayout />;
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LoginLayout />
+    </Suspense>
+  );
 }
