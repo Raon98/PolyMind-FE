@@ -1,11 +1,60 @@
 "use client";
+import { useRouter } from "next/navigation";
+import { Suspense, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect } from "react";
+
+function KakaoCallback() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const code = searchParams.get("code");
+    if (code) {
+      console.log("Received code:", code);
+      // 백엔드로 인증 코드 전송
+      const sendCodeToBackend = async () => {
+        try {
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_BACKEND_URL}/v1/api/kakao/login`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ code }),
+            },
+          );
+
+          if (response.ok) {
+            const { accessToken, refreshToken } = await response.json();
+            // 토큰 저장 로직
+            const result = await signIn("credentials", {
+              redirect: false,
+              id: name,
+              accessToken: accessToken,
+              refreshToken: refreshToken,
+            });
+            console.log("result", result);
+
+            router.push("/chat");
+          } else {
+            console.error("인증 실패");
+          }
+        } catch (error) {
+          console.error("백엔드 통신 오류:", error);
+        }
+      };
+
+      sendCodeToBackend();
+    }
+  }, [searchParams, router]);
+
+  return null;
+}
 
 export default function LoginLayout() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const handleLogin = async () => {
     try {
@@ -20,47 +69,6 @@ export default function LoginLayout() {
     }
   };
 
-  useEffect(() => {
-    const code = searchParams.get("code");
-    if (code) {
-      console.log("Received code:", code);
-      // 백엔드로 인증 코드 전송
-      const sendCodeToBackend = async () => {
-        try {
-          const response = await fetch(
-            `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/kakao`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ code }),
-            },
-          );
-          router.replace("/login");
-          if (response.ok) {
-            const { name, accessToken, refreshToken } = await response.json();
-            // 토큰 저장 로직
-            const result = await signIn("credentials", {
-              redirect: false,
-              id: name,
-              accessToken: accessToken,
-              refreshToken: refreshToken,
-            });
-            console.log("result", result);
-            router.push("/chat");
-          } else {
-            console.error("인증 실패");
-          }
-        } catch (error) {
-          console.error("백엔드 통신 오류:", error);
-        }
-      };
-
-      sendCodeToBackend();
-    }
-  }, [searchParams, router]);
-
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="w-full max-w-md p-8 space-y-8">
@@ -72,6 +80,9 @@ export default function LoginLayout() {
           카카오로 로그인
         </button>
       </div>
+      <Suspense fallback={<div>Loading...</div>}>
+        <KakaoCallback />
+      </Suspense>
     </div>
   );
 }
