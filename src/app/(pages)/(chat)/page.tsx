@@ -1,4 +1,4 @@
-export default function MainPage() {
+export default async function MainPage() {
   return (
     <div className="min-h-screen">
       <main className="container mx-auto px-4 py-8">
@@ -7,4 +7,4 @@ export default function MainPage() {
       </main>
     </div>
   );
-} 
+}
