@@ -10,7 +10,7 @@ export default function LoginLayout() {
     try {
       // 카카오 로그인 URL로 리다이렉션
       const KAKAO_CLIENT_ID = process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID;
-      const REDIRECT_URI = process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI;
+      const REDIRECT_URI = `${window.location.origin}/login`;
       const KAKAO_AUTH_URL = `https://kauth.kakao.com/oauth/authorize?client_id=${KAKAO_CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code`;
 
       window.location.href = KAKAO_AUTH_URL;
@@ -20,39 +20,40 @@ export default function LoginLayout() {
   };
 
   useEffect(() => {
-    const code = new URLSearchParams(window.location.search).get("code");
-    console.log("code입니다" + code);
+    const code = searchParams.get("code");
     if (code) {
+      console.log("Received code:", code);
       // 백엔드로 인증 코드 전송
       const sendCodeToBackend = async () => {
         try {
-          // const response = await fetch(
-          //   `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/kakao`,
-          //   {
-          //     method: "POST",
-          //     headers: {
-          //       "Content-Type": "application/json",
-          //     },
-          //     body: JSON.stringify({ code }),
-          //   },
-          // );
-          // if (response.ok) {
-          //   const { accessToken, refreshToken } = await response.json();
-          //   // 토큰 저장 로직
-          //   localStorage.setItem("accessToken", accessToken);
-          //   localStorage.setItem("refreshToken", refreshToken);
-          //   router.push("/chat");
-          // } else {
-          //   console.error("인증 실패");
-          // }
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/kakao`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ code }),
+            },
+          );
+          router.replace("/login");
+          if (response.ok) {
+            const { accessToken, refreshToken } = await response.json();
+            // 토큰 저장 로직
+            localStorage.setItem("accessToken", accessToken);
+            localStorage.setItem("refreshToken", refreshToken);
+            router.push("/chat");
+          } else {
+            console.error("인증 실패");
+          }
         } catch (error) {
           console.error("백엔드 통신 오류:", error);
         }
       };
 
-      // sendCodeToBackend();
+      sendCodeToBackend();
     }
-  }, [searchParams]);
+  }, [searchParams, router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center">
