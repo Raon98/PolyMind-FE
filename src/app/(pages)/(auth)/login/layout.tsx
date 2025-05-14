@@ -1,4 +1,5 @@
 "use client";
+import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 
@@ -10,7 +11,7 @@ export default function LoginLayout() {
     try {
       // 카카오 로그인 URL로 리다이렉션
       const KAKAO_CLIENT_ID = process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID;
-      const REDIRECT_URI = `${window.location.origin}/login`;
+      const REDIRECT_URI = process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI;
       const KAKAO_AUTH_URL = `https://kauth.kakao.com/oauth/authorize?client_id=${KAKAO_CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code`;
 
       window.location.href = KAKAO_AUTH_URL;
@@ -38,10 +39,15 @@ export default function LoginLayout() {
           );
           router.replace("/login");
           if (response.ok) {
-            const { accessToken, refreshToken } = await response.json();
+            const { name, accessToken, refreshToken } = await response.json();
             // 토큰 저장 로직
-            localStorage.setItem("accessToken", accessToken);
-            localStorage.setItem("refreshToken", refreshToken);
+            const result = await signIn("credentials", {
+              redirect: false,
+              id: name,
+              accessToken: accessToken,
+              refreshToken: refreshToken,
+            });
+            console.log("result", result);
             router.push("/chat");
           } else {
             console.error("인증 실패");
