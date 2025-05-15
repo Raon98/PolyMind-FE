@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import { Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { kakaoLogin } from "./_api/kakaoLogin";
 
 function KakaoCallback() {
   const router = useRouter();
@@ -11,38 +12,32 @@ function KakaoCallback() {
   useEffect(() => {
     const code = searchParams.get("code");
     if (code) {
-      console.log("Received code:", code);
+      console.log("Received code:" + code);
       // 백엔드로 인증 코드 전송
       const sendCodeToBackend = async () => {
-        try {
-          const response = await fetch(
-            `${process.env.NEXT_PUBLIC_BACKEND_URL}/v1/api/kakao/login`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ code }),
-            },
-          );
+        const {
+          expires_in,
+          access_token,
+          refresh_token,
+          refresh_token_expires_in,
+        } = await kakaoLogin(code);
 
-          if (response.ok) {
-            const { accessToken, refreshToken } = await response.json();
-            // 토큰 저장 로직
-            const result = await signIn("credentials", {
-              redirect: false,
-              id: name,
-              accessToken: accessToken,
-              refreshToken: refreshToken,
-            });
-            console.log("result", result);
+        router.replace("/login");
 
-            router.push("/chat");
-          } else {
-            console.error("인증 실패");
-          }
-        } catch (error) {
-          console.error("백엔드 통신 오류:", error);
+        // 토큰 저장 로직
+        const result = await signIn("credentials", {
+          redirect: false,
+          access_token: access_token,
+          expires_in: expires_in,
+          refresh_token: refresh_token,
+          refresh_token_expires_in: refresh_token_expires_in,
+        });
+        console.log("result" + result);
+
+        if (result?.ok) {
+          router.push("/chat");
+        } else {
+          router.replace("/login");
         }
       };
 
@@ -54,8 +49,6 @@ function KakaoCallback() {
 }
 
 export default function LoginLayout() {
-  const router = useRouter();
-
   const handleLogin = async () => {
     try {
       // 카카오 로그인 URL로 리다이렉션
